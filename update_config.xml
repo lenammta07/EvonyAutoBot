@@ -4,7 +4,7 @@
   <Version>1.0.1</Version>
   
   <!-- LINK CỐ ĐỊNH: Bất kể bạn ra bản v1.0.2, v1.0.3,... link này GitHub tự hiểu là bản mới nhất -->
-  <DownloadUrl>https://github.com/lenammta07/EvonyAutoBot-Update/releases/latest/download/EvonyAutoBot.zip</DownloadUrl>
+  <DownloadUrl>https://github.com/lenammta07/EvonyAutoBot/releases/latest/download/EvonyAutoBot.zip</DownloadUrl>
   
   <!-- Thông báo thay đổi chung -->
   <ReleaseNotes>Đã có phiên bản cập nhật mới, vui lòng cập nhật để trải nghiệm tính năng tốt nhất.</ReleaseNotes>
