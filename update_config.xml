@@ -1,11 +1,152 @@
-<?xml version="1.0" encoding="utf-8"?>
-<AppUpdate>
-  <!-- Số phiên bản mới nhất (Phải cao hơn bản trong code của bạn, ví dụ 1.0.1) -->
-  <Version>1.0.1</Version>
-  
-  <!-- Link tải file .exe mới (Chút nữa ta sẽ lấy link này thay thế vào đây) -->
-  <DownloadUrl>DANG_CAP_NHAT_LINK_EXE_VAO_DAY</DownloadUrl>
-  
-  <!-- Nội dung thông báo hiển thị cho người dùng biết bản mới có gì -->
-  <ReleaseNotes>- Cập nhật tính năng mới\n- Sửa lỗi tự động click</ReleaseNotes>
-</AppUpdate>
+using System;
+using System.IO;
+using System.IO.Compression;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Xml.Linq;
+using System.Windows;
+
+namespace EvonyAutoBot // Thay namespace này bằng namespace của dự án bạn đang dùng
+{
+    public static class AutoUpdater
+    {
+        // 1. Đường dẫn file update_config.xml trên GitHub của bạn
+        private static readonly string XmlConfigUrl = "https://raw.githubusercontent.com/TaikhoanCuaBa/TenRepoCuaBa/main/update_config.xml";
+        
+        // 2. Phiên bản hiện tại của phần mềm đang chạy trên máy người dùng
+        private static readonly string CurrentVersion = "1.0.0";
+
+        /// <summary>
+        /// Gọi hàm này ngay sau InitializeComponent() trong MainWindow.xaml.cs
+        /// </summary>
+        public static void Run()
+        {
+            Task.Run(async () => await CheckAndDownloadUpdateAsync());
+        }
+
+        private static async Task CheckAndDownloadUpdateAsync()
+        {
+            try
+            {
+                using (var client = new HttpClient())
+                {
+                    client.Timeout = TimeSpan.FromSeconds(10);
+                    string xmlContent = await client.GetStringAsync(XmlConfigUrl);
+
+                    // Đọc file XML
+                    XDocument doc = XDocument.Parse(xmlContent);
+                    var root = doc.Element("AppUpdate");
+                    if (root == null) return;
+
+                    string latestVersion = root.Element("Version")?.Value;
+                    string downloadUrl = root.Element("DownloadUrl")?.Value; // Đây sẽ là link file .ZIP trên GitHub
+                    string releaseNotes = root.Element("ReleaseNotes")?.Value;
+
+                    // So sánh phiên bản
+                    if (!string.IsNullOrEmpty(latestVersion) && IsNewerVersion(latestVersion, CurrentVersion))
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            MessageBoxResult result = MessageBox.Show(
+                                $"Đã có phiên bản cập nhật mới ({latestVersion})!\n\n" +
+                                $"Nội dung thay đổi:\n{releaseNotes}\n\n" +
+                                $"Bạn có muốn cập nhật ngay bây giờ không?",
+                                "Cập nhật phần mềm & Thư viện Templates",
+                                MessageBoxButton.YesNo,
+                                MessageBoxImage.Information);
+
+                            if (result == MessageBoxResult.Yes && !string.IsNullOrEmpty(downloadUrl))
+                            {
+                                Task.Run(async () => await DownloadAndApplyZipUpdateAsync(downloadUrl));
+                            }
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Lỗi kiểm tra cập nhật: " + ex.Message);
+            }
+        }
+
+        private static bool IsNewerVersion(string latest, string current)
+        {
+            try
+            {
+                Version vLatest = new Version(latest);
+                Version vCurrent = new Version(current);
+                return vLatest > vCurrent;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static async Task DownloadAndApplyZipUpdateAsync(string url)
+        {
+            try
+            {
+                // 1. Tải file .zip về thư mục Temp của Windows
+                string tempZipPath = Path.Combine(Path.GetTempPath(), "EvonyAutoBot_Update.zip");
+                
+                using (var client = new HttpClient())
+                {
+                    var bytes = await client.GetByteArrayAsync(url);
+                    File.WriteAllBytes(tempZipPath, bytes);
+                }
+
+                // 2. Lấy đường dẫn thư mục hiện tại của phần mềm và tên file .exe đang chạy
+                string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                string currentExe = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
+
+                // 3. Tạo file script dạng .bat để tiến hành giải nén và ghi đè
+                string batchPath = Path.Combine(Path.GetTempPath(), "update_zip_script.bat");
+
+                // Đoạn lệnh batch này sẽ:
+                // - Chờ ứng dụng tắt hoàn toàn (2 giây)
+                // - Dùng lệnh PowerShell bên trong file bat để xả nén file .zip đè thẳng vào thư mục gốc của app (bao gồm cả thư mục Templates và ảnh bên trong)
+                // - Khởi động lại ứng dụng và tự xóa file script
+                string batchContent = 
+                    "@echo off\n" +
+                    "echo Dang cap nhat phan mem va tai nguyen, vui long doi...\n" +
+                    "timeout /t 2 /nobreak > nul\n" +
+                    
+                    // Lệnh PowerShell giải nén đè dữ liệu (-Force giúp ghi đè file/thư mục cũ)
+                    $"powershell -Command \"Expand-Archive -Path '{tempZipPath}' -DestinationPath '{appDirectory}' -Force\"\n" +
+                    
+                    // Xóa file zip tạm sau khi giải nén xong
+                    $"del \"{tempZipPath}\"\n" +
+                    
+                    // Khởi động lại ứng dụng
+                    $"start \"\" \"{currentExe}\"\n" +
+                    
+                    // Tự xóa file batch
+                    "del \"%~f0\"\n";
+
+                File.WriteAllText(batchPath, batchContent);
+
+                // Chạy file batch dưới nền ẩn cửa sổ đen
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = batchPath,
+                    CreateNoWindow = true,
+                    UseShellExecute = false
+                });
+
+                // Tắt ứng dụng hiện tại để tiến hành ghi đè file
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Application.Current.Shutdown();
+                });
+            }
+            catch (Exception ex)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show("Không thể cập nhật tự động: " + ex.Message, "Lỗi cập nhật", MessageBoxButton.OK, MessageBoxImage.Error);
+                });
+            }
+        }
+    }
+}
