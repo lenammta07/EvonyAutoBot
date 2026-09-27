@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AppUpdate>
+  <!-- Số phiên bản mới nhất (Phải cao hơn bản trong code của bạn, ví dụ 1.0.1) -->
+  <Version>1.0.1</Version>
+  
+  <!-- Link tải file .exe mới (Chút nữa ta sẽ lấy link này thay thế vào đây) -->
+  <DownloadUrl>DANG_CAP_NHAT_LINK_EXE_VAO_DAY</DownloadUrl>
+  
+  <!-- Nội dung thông báo hiển thị cho người dùng biết bản mới có gì -->
+  <ReleaseNotes>- Cập nhật tính năng mới\n- Sửa lỗi tự động click</ReleaseNotes>
+</AppUpdate>
