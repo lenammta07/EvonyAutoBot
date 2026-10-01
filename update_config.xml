@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AppUpdate>
   <!-- Số phiên bản hiện tại đang có trên mạng -->
-  <Version>1.0.4</Version>
+  <Version>1.0.5</Version>
   
   <!-- LINK CỐ ĐỊNH: Bất kể bạn ra bản v1.0.2, v1.0.3,... link này GitHub tự hiểu là bản mới nhất -->
   <DownloadUrl>https://github.com/lenammta07/EvonyAutoBot/releases/latest/download/EvonyAutoBot.zip</DownloadUrl>
